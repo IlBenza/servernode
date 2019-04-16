@@ -15,16 +15,11 @@ const server = http.createServer(function(req, res) {
 
         res.writeHead(200, {"Content-Type": 'text/html'});
         res.write(JSON.stringify(
-            [
-                {
-                    "nome": "Mario",
-                    "cognome": "Rossi"
-                },
-                {
-                    "nome": "Luigi",
-                    "cognome": "Verdi"
-                },
-            ]
+            {
+                "version": "0.1",
+                "nome": "Mia API personale",
+                "data": "2019-04-16"
+            }
         ));
         res.end();
     } else {
