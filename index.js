@@ -1,41 +1,81 @@
-// Modulo http
-const http = require('http');
-const port = 8081;
+const express = require('express')
+const app = express()
+const users = require('./routes/users')
+const personaggi = require('./routes/personaggi')
+let port = process.argv[2] || 8080
 
-// Funzione server intestazione
-const server = http.createServer(function(req, res) {
+const MongoClient = require('mongodb').MongoClient;
+const ObjectId = require('mongodb').ObjectId;
+const uri = "mongodb+srv://db_user:07Icius1!@cluster0-2sku7.mongodb.net/test?retryWrites=true";
+const client = new MongoClient(uri, { useNewUrlParser: true });
+client.connect((err) => {
 
-    console.log(req.url);
-    if(req.url === '/'){
+    if(err){
+      console.log('Error\n', err);
+    }
+    console.log('Connected');
 
-        res.writeHead(200, {"Content-Type": 'text/html'});
-        res.write('<h1>Home</h1>');
-        res.end();
-    } else if(req.url === '/api'){
+    //READ
+    client.db("servernode").collection("personaggi").find().toArray(function (err, result){
+      if (err) throw err
+      console.log(result)
+    }) 
 
-        res.writeHead(200, {"Content-Type": 'text/html'});
-        res.write(JSON.stringify(
-            [
-                {
-                    "nome": "Mario",
-                    "cognome": "Rossi"
-                },
-                {
-                    "nome": "Luigi",
-                    "cognome": "Verdi"
-                },
-            ]
-        ));
-        res.end();
-    } else {
+    //INSERT
+    client.db("servernode").collection('personaggi', function (err, collection){
 
-        res.writeHead(200, {"Content-Type": 'text/html'});
-        res.write(`<h1>${req.url}</h1>`);
-        res.end();
-    }       
-})
 
-// Ascolto su porta + indirizzo
-server.listen(port, '127.0.0.1');
+      collection.insertOne({ name: 'Mario', lastname: 'Rossi'});
 
-console.log(`Server in funzione su http://127.0.0.1:${port}/`);
+      client.db("servernode").collection('personaggi').countDocuments(function(err, count){
+
+        if(err) throw err;
+        console.log('Total rows: ' + count);
+      });
+    });
+
+    //UPDATE
+    client.db("servernode").collection('personaggi', function (err, collection){
+      
+      const newOne = {name: 'Pippo', lastname: 'Startk', vivo:false};
+      collection.deleteOne({ id:ObjectId("5cd5499377ae010f2cf24b25")}, { $set: newOne},
+    
+      function(err, result){
+        
+        if(err) throw err;
+        console.log('Documento aggiornato');
+      });
+    });
+
+    //DELETE
+    client.db("servernode").collection("personaggi").
+    remove({ id:ObjectId("5cd5499377ae010f2cf24b25")}, { w:1 }, function(err, result) {
+
+      if(err) throw err;
+      console.log('Documento eliminato');
+    });
+
+  //CHIUDI
+  client.close();
+});
+
+
+app.use(express.urlencoded({extended: false}))
+
+const myLogger = (req, res, next) => {
+  console.log('LOGGED');
+  next();
+};
+
+app.use(myLogger);
+
+app.use('/v0.1/users', users)
+app.use('/v0.1/personaggi', personaggi)
+app.use('/v0.2/personaggi', personaggi)
+// app.use('/v0.2/admin/', personaggi)
+
+
+app.use((req, res) => {
+  res.status(404).send('what??? error 404')
+});
+app.listen(port)
